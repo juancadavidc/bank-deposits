@@ -9,9 +9,42 @@ interface MetricCardProps {
   title: string;
   metrics: DashboardMetrics;
   previousMetrics?: DashboardMetrics;
+  variant?: 'trust' | 'growth' | 'premium' | 'prosperity';
 }
 
-function MetricCard({ title, metrics, previousMetrics }: MetricCardProps) {
+function MetricCard({ title, metrics, previousMetrics, variant = 'trust' }: MetricCardProps) {
+  // Neuromarketing color classes based on psychological impact
+  const getVariantClasses = (variant: string) => {
+    const variants = {
+      trust: {
+        card: 'neuro-trust hover:shadow-md transition-all duration-200',
+        title: 'neuro-trust-text uppercase tracking-wider',
+        metric: 'neuro-trust-metric mb-1',
+        badge: 'neuro-trust-badge banking-subtle'
+      },
+      growth: {
+        card: 'neuro-growth hover:shadow-md transition-all duration-200',
+        title: 'neuro-growth-text uppercase tracking-wider',
+        metric: 'neuro-growth-metric mb-1',
+        badge: 'neuro-growth-badge banking-subtle'
+      },
+      premium: {
+        card: 'neuro-premium hover:shadow-md transition-all duration-200',
+        title: 'neuro-premium-text uppercase tracking-wider',
+        metric: 'neuro-premium-metric mb-1',
+        badge: 'neuro-premium-badge banking-subtle'
+      },
+      prosperity: {
+        card: 'neuro-prosperity hover:shadow-md transition-all duration-200',
+        title: 'neuro-prosperity-text uppercase tracking-wider',
+        metric: 'neuro-prosperity-metric mb-1',
+        badge: 'neuro-prosperity-badge banking-subtle'
+      }
+    };
+    return variants[variant as keyof typeof variants] || variants.trust;
+  };
+  
+  const classes = getVariantClasses(variant);
   // Colombian Peso formatting with period as thousands separator
   const formatCurrency = (value: number): string => {
     return `$${value.toLocaleString('es-CO', { 
@@ -37,27 +70,27 @@ function MetricCard({ title, metrics, previousMetrics }: MetricCardProps) {
   const change = calculateChange();
 
   return (
-    <Card className="border border-green-200 bg-gradient-to-br from-green-50 to-white shadow-sm hover:shadow-md transition-shadow">
+    <Card className={classes.card}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-green-800">
+        <CardTitle className={classes.title}>
           {title}
         </CardTitle>
-        <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+        <Badge variant="secondary" className={classes.badge}>
           {metrics.transactionCount} transacciones
         </Badge>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-green-900 mb-1">
+        <div className={classes.metric}>
           {formatCurrency(metrics.totalAmount)}
         </div>
-        <div className="text-sm text-gray-600 mb-2">
-          Promedio: {formatCurrency(metrics.averageAmount)}
+        <div className="banking-subtle mb-2">
+          Promedio: <span className="banking-amount">{formatCurrency(metrics.averageAmount)}</span>
         </div>
         {change && (
-          <div className={`text-xs flex items-center ${
+          <div className={`banking-subtle flex items-center ${
             change.isIncrease 
-              ? 'text-green-600' 
-              : 'text-red-500'
+              ? 'text-primary opacity-70' 
+              : 'text-destructive opacity-70'
           }`}>
             <span className="mr-1">
               {change.isIncrease ? '↗' : '↘'}
@@ -77,13 +110,13 @@ export default function MetricsCards() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[...Array(4)].map((_, index) => (
-          <Card key={index} className="animate-pulse">
+          <Card key={index} className="banking-elegant animate-pulse">
             <CardHeader>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-muted rounded w-3/4"></div>
             </CardHeader>
             <CardContent>
-              <div className="h-8 bg-gray-200 rounded w-full mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-8 bg-muted rounded w-full mb-2"></div>
+              <div className="h-3 bg-muted rounded w-1/2"></div>
             </CardContent>
           </Card>
         ))}
@@ -117,35 +150,38 @@ export default function MetricsCards() {
       <MetricCard
         title="Hoy"
         metrics={dailyMetrics}
+        variant="trust"
       />
       
       <MetricCard
         title="Esta Semana"
         metrics={weeklyMetrics}
+        variant="growth"
       />
       
       <MetricCard
         title="Este Mes" 
         metrics={monthlyMetrics}
+        variant="premium"
       />
       
-      <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-white shadow-sm hover:shadow-md transition-shadow">
+      <Card className="neuro-prosperity hover:shadow-md transition-all duration-200">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-blue-800">
+          <CardTitle className="neuro-prosperity-text uppercase tracking-wider">
             Promedio
           </CardTitle>
-          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+          <Badge variant="secondary" className="neuro-prosperity-badge banking-subtle">
             Todas las transacciones
           </Badge>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-blue-900 mb-1">
+          <div className="neuro-prosperity-metric mb-1">
             ${overallAverage.toLocaleString('es-CO', { 
               minimumFractionDigits: 0,
               maximumFractionDigits: 0
             })}
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="banking-subtle">
             Por transacción
           </div>
         </CardContent>

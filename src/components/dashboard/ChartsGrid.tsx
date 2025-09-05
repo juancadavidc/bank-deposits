@@ -9,36 +9,36 @@ import { DailyComparison } from '@/components/charts/DailyComparison';
 export default function ChartsGrid() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <Card>
+      <Card className="banking-elegant">
         <CardHeader>
-          <CardTitle>Timeline de Depósitos</CardTitle>
+          <CardTitle className="banking-subtle uppercase tracking-wider">Timeline de Depósitos</CardTitle>
         </CardHeader>
         <CardContent>
           <DepositTimeline />
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="banking-elegant">
         <CardHeader>
-          <CardTitle>Patrones por Hora</CardTitle>
+          <CardTitle className="banking-subtle uppercase tracking-wider">Patrones por Hora</CardTitle>
         </CardHeader>
         <CardContent>
           <HourlyPatterns />
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="banking-elegant">
         <CardHeader>
-          <CardTitle>Principales Remitentes</CardTitle>
+          <CardTitle className="banking-subtle uppercase tracking-wider">Principales Remitentes</CardTitle>
         </CardHeader>
         <CardContent>
           <TopSenders />
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="banking-elegant">
         <CardHeader>
-          <CardTitle>Comparación Diaria</CardTitle>
+          <CardTitle className="banking-subtle uppercase tracking-wider">Comparación Diaria</CardTitle>
         </CardHeader>
         <CardContent>
           <DailyComparison />
