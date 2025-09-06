@@ -1,4 +1,4 @@
-# Bancolombia Balances Dashboard
+# Balances Dashboard
 
 A modern React dashboard application for analyzing banking transaction data and account balances. Built with Next.js 15, TypeScript, Supabase, and a comprehensive UI component library with real-time data processing capabilities.
 

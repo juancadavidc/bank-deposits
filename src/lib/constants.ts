@@ -1,4 +1,4 @@
-export const APP_NAME = 'Bancolombia Balances Dashboard';
+export const APP_NAME = 'Balances Dashboard';
 
 export const CURRENCIES = {
   COP: 'COP',

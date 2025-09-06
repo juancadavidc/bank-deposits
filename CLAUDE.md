@@ -1,4 +1,4 @@
-# Bancolombia Balances Dashboard - Claude Assistant Guide
+# Balances Dashboard - Claude Assistant Guide
 
 ## Project Overview
 Modern React dashboard for banking transaction analysis with real-time SMS webhook processing. Built with Next.js 15, TypeScript, and Supabase.
