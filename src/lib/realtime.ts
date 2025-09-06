@@ -1,10 +1,10 @@
 import { createClientComponentClient } from './supabase'
-import { Transaction, transformTransaction } from './database'
-import { DatabaseTransaction } from './types'
+import { transformTransaction } from './database'
+import { Transaction, DatabaseTransaction } from './types'
 
 export class RealtimeSubscriptions {
   private supabase = createClientComponentClient()
-  private channels: { [key: string]: any } = {}
+  private channels: Record<string, unknown> = {}
 
   // Subscribe to new transactions
   subscribeToTransactions(callback: (transaction: Transaction) => void) {

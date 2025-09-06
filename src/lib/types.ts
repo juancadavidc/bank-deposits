@@ -87,3 +87,28 @@ export interface DashboardState {
   isLoading: boolean;
   error: string | null;
 }
+
+// Webhook endpoint types
+export interface WebhookRequest {
+  message: string;
+  timestamp: string;
+  phone: string;
+  webhookId: string;
+}
+
+export interface WebhookResponse {
+  status: 'processed' | 'error' | 'duplicate';
+  transactionId?: string;
+  webhookId: string;
+  error?: string;
+}
+
+export interface ParsedMessage {
+  amount: number;
+  senderName: string;
+  account: string;
+  date: Date;
+  time: string;
+  success: boolean;
+  errorReason?: string;
+}
