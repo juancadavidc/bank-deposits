@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals'
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals'
 import { TransactionDatabase, ParseErrorDatabase } from '../database'
 import { supabase } from '../supabase'
 
@@ -19,7 +19,7 @@ describe('Database Operations', () => {
   
   beforeAll(async () => {
     // Verify Supabase connection
-    const { data, error } = await supabase.auth.getSession()
+    const { error } = await supabase.auth.getSession()
     if (error && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       console.warn('Warning: Tests require valid Supabase configuration')
     }

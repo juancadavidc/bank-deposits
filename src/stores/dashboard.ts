@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { Transaction, DashboardMetrics } from '@/lib/types';
 import { startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth, isWithinInterval } from 'date-fns';
+import { TransactionDatabase } from '@/lib/database';
+import { RealtimeSubscriptions } from '@/lib/realtime';
+import { cache } from '@/lib/cache';
 
 interface FilterState {
   searchTerm: string;
@@ -14,13 +17,29 @@ interface DashboardStore {
   metrics: Record<string, DashboardMetrics>;
   loading: boolean;
   error: string | null;
+  realTimeConnected: boolean;
+  lastUpdated: Date | null;
   
-  // Filter State (for future stories)
+  // Filter State
   searchTerm: string;
   dateRange: { start: Date; end: Date };
   statusFilter: string;
   
-  // Actions
+  // Pagination State
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+  
+  // Actions - Real Data Operations
+  fetchTransactions: (filters?: Partial<FilterState & { page?: number; limit?: number }>) => Promise<void>;
+  fetchMetrics: () => Promise<void>;
+  subscribeToRealTime: () => void;
+  unsubscribeFromRealTime: () => void;
+  refreshData: () => Promise<void>;
+  
+  // Actions - Legacy (kept for compatibility)
   addTransaction: (transaction: Transaction) => void;
   setTransactions: (transactions: Transaction[]) => void;
   updateMetrics: (period: string, metrics: DashboardMetrics) => void;
@@ -29,6 +48,11 @@ interface DashboardStore {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
+  
+  // Real-time Actions
+  setRealTimeConnected: (connected: boolean) => void;
+  setLastUpdated: (date: Date) => void;
+  setPagination: (pagination: Partial<{ page: number; limit: number; total: number }>) => void;
 }
 
 const calculatePeriodMetrics = (
@@ -80,23 +104,150 @@ const initialDateRange = {
   end: endOfMonth(new Date())
 };
 
+// Global realtime subscription instance
+let realtimeInstance: RealtimeSubscriptions | null = null;
+
 export const useDashboardStore = create<DashboardStore>((set, get) => ({
   // Initial state
   transactions: [],
   metrics: {},
   loading: false,
   error: null,
+  realTimeConnected: false,
+  lastUpdated: null,
   searchTerm: '',
   dateRange: initialDateRange,
   statusFilter: 'all',
+  pagination: {
+    page: 0,
+    limit: 50,
+    total: 0
+  },
   
-  // Actions
+  // Real Data Operations
+  fetchTransactions: async (filters = {}) => {
+    try {
+      set({ loading: true, error: null });
+      
+      const { dateRange, statusFilter, searchTerm, page = 0, limit = 50 } = {
+        ...get(),
+        ...filters
+      };
+      
+      const dbFilters: Record<string, unknown> = {
+        limit,
+        offset: page * limit
+      };
+      
+      if (dateRange) {
+        dbFilters.startDate = dateRange.start;
+        dbFilters.endDate = dateRange.end;
+      }
+      
+      if (statusFilter && statusFilter !== 'all') {
+        dbFilters.status = statusFilter;
+      }
+
+      if (searchTerm && searchTerm.trim()) {
+        dbFilters.searchTerm = searchTerm.trim();
+      }
+      
+      const transactions = await TransactionDatabase.getTransactions(dbFilters);
+      
+      set({ 
+        transactions,
+        lastUpdated: new Date(),
+        pagination: { page, limit, total: transactions.length }
+      });
+      
+      // Recalculate metrics with new data
+      get().calculateMetrics();
+      
+    } catch (error) {
+      console.error('Failed to fetch transactions:', error);
+      set({ error: 'Failed to load transactions from database' });
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  fetchMetrics: async () => {
+    try {
+      const now = new Date();
+      
+      // Fetch detailed metrics for all periods using database aggregations
+      const [dailyMetrics, weeklyMetrics, monthlyMetrics] = await Promise.all([
+        TransactionDatabase.getDetailedMetrics('daily', now),
+        TransactionDatabase.getDetailedMetrics('weekly', now),
+        TransactionDatabase.getDetailedMetrics('monthly', now)
+      ]);
+      
+      set({
+        metrics: {
+          daily: dailyMetrics,
+          weekly: weeklyMetrics,
+          monthly: monthlyMetrics
+        }
+      });
+      
+    } catch (error) {
+      console.error('Failed to fetch metrics:', error);
+      set({ error: 'Failed to load metrics from database' });
+    }
+  },
+
+  subscribeToRealTime: () => {
+    try {
+      if (!realtimeInstance) {
+        realtimeInstance = new RealtimeSubscriptions();
+      }
+      
+      realtimeInstance.subscribeToTransactions((newTransaction) => {
+        // Clear relevant cache entries when new data arrives
+        cache.clear(); // Simple approach - clear all cache on new transaction
+        
+        get().addTransaction(newTransaction);
+        set({ 
+          lastUpdated: new Date(),
+          realTimeConnected: true 
+        });
+
+        // Refresh metrics when new transaction arrives
+        get().fetchMetrics();
+      });
+      
+      set({ realTimeConnected: true });
+      
+    } catch (error) {
+      console.error('Failed to subscribe to real-time updates:', error);
+      set({ 
+        realTimeConnected: false,
+        error: 'Real-time updates unavailable' 
+      });
+    }
+  },
+
+  unsubscribeFromRealTime: () => {
+    if (realtimeInstance) {
+      realtimeInstance.unsubscribeAll();
+      realtimeInstance = null;
+    }
+    set({ realTimeConnected: false });
+  },
+
+  refreshData: async () => {
+    await Promise.all([
+      get().fetchTransactions(),
+      get().fetchMetrics()
+    ]);
+  },
+
+  // Legacy Actions (kept for compatibility)
   addTransaction: (transaction) => {
     set((state) => {
       const updatedTransactions = [...state.transactions, transaction];
       return { transactions: updatedTransactions };
     });
-    // Recalculate metrics after adding transaction
     get().calculateMetrics();
   },
   
@@ -115,7 +266,6 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     const { transactions } = get();
     const now = new Date();
     
-    // Calculate metrics for all periods
     const dailyMetrics = calculatePeriodMetrics(transactions, 'daily', now);
     const weeklyMetrics = calculatePeriodMetrics(transactions, 'weekly', now);
     const monthlyMetrics = calculatePeriodMetrics(transactions, 'monthly', now);
@@ -135,11 +285,18 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       dateRange: filters.dateRange ?? state.dateRange,
       statusFilter: filters.statusFilter ?? state.statusFilter
     }));
+    // Refetch data with new filters
+    get().fetchTransactions(filters);
   },
   
   setLoading: (loading) => set({ loading }),
-  
   setError: (error) => set({ error }),
-  
-  clearError: () => set({ error: null })
+  clearError: () => set({ error: null }),
+
+  // Real-time State Actions
+  setRealTimeConnected: (connected) => set({ realTimeConnected: connected }),
+  setLastUpdated: (date) => set({ lastUpdated: date }),
+  setPagination: (pagination) => set((state) => ({
+    pagination: { ...state.pagination, ...pagination }
+  }))
 }));

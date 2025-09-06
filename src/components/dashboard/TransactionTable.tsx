@@ -27,9 +27,16 @@ interface SortConfig {
 const ITEMS_PER_PAGE = 50;
 
 export function TransactionTable() {
-  const { transactions, searchTerm, dateRange, statusFilter } = useDashboardStore();
+  const { 
+    transactions, 
+    searchTerm, 
+    dateRange, 
+    statusFilter, 
+    loading,
+    pagination,
+    fetchTransactions
+  } = useDashboardStore();
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'date', direction: 'desc' });
-  const [currentPage, setCurrentPage] = useState(1);
 
   // Filter transactions based on search, date range, and status
   const filteredTransactions = useMemo(() => {
@@ -79,13 +86,14 @@ export function TransactionTable() {
     return sorted;
   }, [filteredTransactions, sortConfig]);
 
-  // Paginated transactions
+  // For server-side pagination, we use all transactions directly since they're already paginated
+  // For client-side sorting/filtering, we can still use the sortedTransactions
   const paginatedTransactions = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return sortedTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [sortedTransactions, currentPage]);
+    return sortedTransactions;
+  }, [sortedTransactions]);
 
   const totalPages = Math.ceil(sortedTransactions.length / ITEMS_PER_PAGE);
+  const currentPage = pagination.page + 1; // Convert 0-based to 1-based
 
   // Handle sorting
   const handleSort = (field: SortField) => {
@@ -93,7 +101,8 @@ export function TransactionTable() {
       field,
       direction: current.field === field && current.direction === 'asc' ? 'desc' : 'asc'
     }));
-    setCurrentPage(1); // Reset to first page when sorting
+    // Reset to first page when sorting
+    fetchTransactions({ page: 0 });
   };
 
   // Format Colombian currency
@@ -122,8 +131,8 @@ export function TransactionTable() {
 
   // Reset pagination when filters change
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, dateRange, statusFilter]);
+    fetchTransactions({ page: 0 });
+  }, [searchTerm, dateRange, statusFilter, fetchTransactions]);
 
   // Render sort icon
   const renderSortIcon = (field: SortField) => {
@@ -135,10 +144,48 @@ export function TransactionTable() {
       <ChevronDown className="h-4 w-4" />;
   };
 
-  // Handle page navigation
-  const handlePageChange = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(totalPages, page)));
+  // Handle page navigation - triggers new data fetch
+  const handlePageChange = async (page: number) => {
+    const newPage = Math.max(0, Math.min(totalPages - 1, page - 1)); // Convert to 0-based
+    await fetchTransactions({ page: newPage });
   };
+
+  // Loading skeleton for table
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Hora</TableHead>
+                <TableHead className="text-right">Monto</TableHead>
+                <TableHead>Remitente</TableHead>
+                <TableHead>Cuenta</TableHead>
+                <TableHead>Estado</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(10)].map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell><div className="h-4 bg-muted rounded animate-pulse"></div></TableCell>
+                  <TableCell><div className="h-4 bg-muted rounded animate-pulse w-16"></div></TableCell>
+                  <TableCell><div className="h-4 bg-muted rounded animate-pulse w-20 ml-auto"></div></TableCell>
+                  <TableCell><div className="h-4 bg-muted rounded animate-pulse w-32"></div></TableCell>
+                  <TableCell><div className="h-4 bg-muted rounded animate-pulse w-16"></div></TableCell>
+                  <TableCell><div className="h-4 bg-muted rounded animate-pulse w-20"></div></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Cargando transacciones...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

@@ -9,12 +9,14 @@ type RewriteRoutes = never
 type Routes = AppRoutes | PageRoutes | LayoutRoutes | RedirectRoutes | RewriteRoutes
 
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface ParamMap {
 }
 
 
 export type ParamsOf<Route extends Routes> = ParamMap[Route]
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface LayoutSlotMap {
 }
 

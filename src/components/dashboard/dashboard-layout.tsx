@@ -5,12 +5,13 @@ import MetricsCards from './MetricsCards';
 import ChartsGrid from './ChartsGrid';
 import { FilterBar } from './FilterBar';
 import { TransactionTable } from './TransactionTable';
+import { RealTimeIndicator } from './RealTimeIndicator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useMockDataLoader } from '@/hooks/useMockDataLoader';
+import { useDataLoader } from '@/hooks/useDataLoader';
 
 export default function DashboardLayout() {
-  // Initialize mock data loading
-  const { error } = useMockDataLoader();
+  // Initialize real data loading
+  const { error } = useDataLoader();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -23,9 +24,13 @@ export default function DashboardLayout() {
             <p className="text-red-600 text-sm">⚠️ {error}</p>
           </div>
         )}
+        {/* Real-time Status Indicator */}
+        <div className="mb-4">
+          <RealTimeIndicator />
+        </div>
+
         {/* Metrics Cards Section */}
         <MetricsCards />
-
 
         {/* Filter Section */}
         <div className="mb-4 md:mb-6">
