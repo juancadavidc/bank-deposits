@@ -68,9 +68,15 @@ Content-Type: application/json
 
 ### Environment Variables Required
 ```bash
+# Client-side Supabase configuration (exposed to browser)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Server-side Supabase configuration (private)
+SUPABASE_URL=your_supabase_project_url
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Webhook authentication
 WEBHOOK_SECRET=your_webhook_secret_token
 ```
 
