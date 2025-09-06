@@ -43,7 +43,7 @@ A modern React dashboard application for analyzing banking transaction data and 
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd bancolombia-balances-app
+cd balances-app
 ```
 
 2. Install dependencies:
