@@ -3,7 +3,7 @@ import { Transaction, DashboardMetrics } from '@/lib/types';
 import { startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth, isWithinInterval } from 'date-fns';
 import { TransactionDatabase } from '@/lib/database';
 import { RealtimeSubscriptions } from '@/lib/realtime';
-import { cache } from '@/lib/cache';
+import { cache, CacheKeys } from '@/lib/cache';
 
 interface FilterState {
   searchTerm: string;
@@ -16,6 +16,7 @@ interface DashboardStore {
   transactions: Transaction[];
   metrics: Record<string, DashboardMetrics>;
   loading: boolean;
+  metricsUpdating: boolean;
   error: string | null;
   realTimeConnected: boolean;
   lastUpdated: Date | null;
@@ -46,6 +47,7 @@ interface DashboardStore {
   calculateMetrics: () => void;
   setFilters: (filters: Partial<FilterState>) => void;
   setLoading: (loading: boolean) => void;
+  setMetricsUpdating: (updating: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
   
@@ -112,6 +114,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   transactions: [],
   metrics: {},
   loading: false,
+  metricsUpdating: false,
   error: null,
   realTimeConnected: false,
   lastUpdated: null,
@@ -173,6 +176,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
 
   fetchMetrics: async () => {
     try {
+      // Set updating state while preserving existing metrics
+      set({ metricsUpdating: true, error: null });
+      
       const now = new Date();
       
       // Fetch detailed metrics for all periods using database aggregations
@@ -182,17 +188,23 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         TransactionDatabase.getDetailedMetrics('monthly', now)
       ]);
       
-      set({
+      // Update metrics while keeping existing state intact
+      set((state) => ({
         metrics: {
-          daily: dailyMetrics,
-          weekly: weeklyMetrics,
-          monthly: monthlyMetrics
-        }
-      });
+          ...state.metrics, // Preserve any existing metrics
+          daily: dailyMetrics as DashboardMetrics,
+          weekly: weeklyMetrics as DashboardMetrics,
+          monthly: monthlyMetrics as DashboardMetrics
+        },
+        metricsUpdating: false
+      }));
       
     } catch (error) {
       console.error('Failed to fetch metrics:', error);
-      set({ error: 'Failed to load metrics from database' });
+      set({ 
+        error: 'Failed to load metrics from database',
+        metricsUpdating: false
+      });
     }
   },
 
@@ -203,16 +215,25 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       }
       
       realtimeInstance.subscribeToTransactions((newTransaction) => {
-        // Clear relevant cache entries when new data arrives
-        cache.clear(); // Simple approach - clear all cache on new transaction
-        
+        // Add transaction optimistically
         get().addTransaction(newTransaction);
         set({ 
           lastUpdated: new Date(),
           realTimeConnected: true 
         });
 
-        // Refresh metrics when new transaction arrives
+        // Use targeted cache invalidation instead of clearing all cache
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const dailyKey = CacheKeys.metrics(`daily:${dateStr}`);
+        const weeklyKey = CacheKeys.metrics(`weekly:${dateStr}`);
+        const monthlyKey = CacheKeys.metrics(`monthly:${dateStr}`);
+        
+        cache.delete(dailyKey);
+        cache.delete(weeklyKey);
+        cache.delete(monthlyKey);
+
+        // Refresh metrics using stale-while-revalidate pattern
         get().fetchMetrics();
       });
       
@@ -290,6 +311,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   },
   
   setLoading: (loading) => set({ loading }),
+  setMetricsUpdating: (updating) => set({ metricsUpdating: updating }),
   setError: (error) => set({ error }),
   clearError: () => set({ error: null }),
 

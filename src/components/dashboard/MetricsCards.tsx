@@ -10,9 +10,10 @@ interface MetricCardProps {
   metrics: DashboardMetrics;
   previousMetrics?: DashboardMetrics;
   variant?: 'trust' | 'growth' | 'premium' | 'prosperity';
+  updating?: boolean;
 }
 
-function MetricCard({ title, metrics, previousMetrics, variant = 'trust' }: MetricCardProps) {
+function MetricCard({ title, metrics, previousMetrics, variant = 'trust', updating = false }: MetricCardProps) {
   // Neuromarketing color classes based on psychological impact
   const getVariantClasses = (variant: string) => {
     const variants = {
@@ -70,10 +71,16 @@ function MetricCard({ title, metrics, previousMetrics, variant = 'trust' }: Metr
   const change = calculateChange();
 
   return (
-    <Card className={classes.card}>
+    <Card className={`${classes.card} ${updating ? 'relative overflow-hidden' : ''}`}>
+      {updating && (
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 animate-pulse" />
+      )}
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className={classes.title}>
+        <CardTitle className={`${classes.title} flex items-center gap-2`}>
           {title}
+          {updating && (
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+          )}
         </CardTitle>
         <Badge variant="secondary" className={classes.badge}>
           {metrics.transactionCount} transacciones
@@ -104,7 +111,7 @@ function MetricCard({ title, metrics, previousMetrics, variant = 'trust' }: Metr
 }
 
 export default function MetricsCards() {
-  const { metrics, loading } = useDashboardStore();
+  const { metrics, loading, metricsUpdating } = useDashboardStore();
   
   if (loading) {
     return (
@@ -151,24 +158,33 @@ export default function MetricsCards() {
         title="Hoy"
         metrics={dailyMetrics}
         variant="trust"
+        updating={metricsUpdating}
       />
       
       <MetricCard
         title="Esta Semana"
         metrics={weeklyMetrics}
         variant="growth"
+        updating={metricsUpdating}
       />
       
       <MetricCard
         title="Este Mes" 
         metrics={monthlyMetrics}
         variant="premium"
+        updating={metricsUpdating}
       />
       
-      <Card className="neuro-prosperity hover:shadow-md transition-all duration-200">
+      <Card className={`neuro-prosperity hover:shadow-md transition-all duration-200 ${metricsUpdating ? 'relative overflow-hidden' : ''}`}>
+        {metricsUpdating && (
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 animate-pulse" />
+        )}
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="neuro-prosperity-text uppercase tracking-wider">
+          <CardTitle className={`neuro-prosperity-text uppercase tracking-wider flex items-center gap-2`}>
             Promedio
+            {metricsUpdating && (
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+            )}
           </CardTitle>
           <Badge variant="secondary" className="neuro-prosperity-badge banking-subtle">
             Todas las transacciones
